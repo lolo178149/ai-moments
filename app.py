@@ -2,21 +2,34 @@ import streamlit as st
 import requests
 import json
 
-# 页面基础配置
+# 1. 页面基础配置
 st.set_page_config(page_title="AI朋友圈文案生成器", page_icon="🌸")
+
+# 2. 隐藏右下角标志和顶部菜单的魔法代码（让页面更干净）
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            .viewerBadge_container__1QS1Y {display: none !important;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 st.title("🌸 AI 朋友圈文案生成器")
 
-# --- 从 Secrets 保险柜自动获取密钥 ---
+# 3. 从后台 Secrets 保险柜自动获取密钥
 try:
     api_key = st.secrets["DEEPSEEK_API_KEY"]
 except Exception:
-    st.error("🔑 未在后台检测到密钥，请检查 Streamlit Secrets 设置。")
+    st.error("🔑 未在后台检测到密钥，请确保已在 Streamlit Secrets 中配置了 DEEPSEEK_API_KEY。")
     st.stop()
-# ----------------------------------
 
-topic = st.text_input("你想发什么内容？", placeholder="例如：去爬山、吃大餐...")
+# 4. 界面输入部分
+topic = st.text_input("你想发什么内容？", placeholder="例如：吃大龙虾、去爬山...")
 style = st.selectbox("想要什么风格？", ["幽默搞笑", "文艺清新", "凡尔赛", "职场精英"])
 
+# 5. 生成逻辑
 if st.button("🚀 立即生成"):
     if not topic:
         st.warning("请先输入你想发的内容哦！")
