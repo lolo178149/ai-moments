@@ -2,69 +2,111 @@ import streamlit as st
 import requests
 import json
 
-# --- 1. 页面基础配置 ---
-st.set_page_config(page_title="AI朋友圈文案生成器", page_icon="🌸")
+# 页面设置
+st.set_page_config(
+    page_title="AI朋友圈文案生成器",
+    page_icon="✨"
+)
 
-# --- 2. 终极屏蔽魔法：隐藏右下角标志、顶部菜单和页脚 ---
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
-            /* 强制隐藏右下角部署按钮和状态组件 */
-            div[data-testid="stStatusWidget"] {visibility: hidden;}
-            .viewerBadge_container__1QS1Y {display: none !important;}
-            .stAppDeployButton {display: none !important;}
-            #stDecoration {display: none !important;}
-            [data-testid="stFooter"] {display: none !important;}
-            /* 移除底部留白 */
-            .main .block-container {padding-bottom: 0rem;}
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+# 标题
+st.title("✨ AI朋友圈文案生成器")
 
-st.title("🌸 AI 朋友圈文案生成器")
+st.caption("输入你的状态，让 AI 帮你组织表达。")
 
-# --- 3. 从后台 Secrets 保险柜自动获取密钥 ---
-# 提示：请确保你已经在 Streamlit Cloud 的 Settings -> Secrets 里配置了 DEEPSEEK_API_KEY
-try:
-    api_key = st.secrets["DEEPSEEK_API_KEY"]
-except Exception:
-    st.error("🔑 还没在后台保险柜放钥匙哦！请在 Streamlit Secrets 中配置 DEEPSEEK_API_KEY。")
-    st.stop()
+# 用户输入
+topic = st.text_area(
+    "你今天想表达什么？",
+    placeholder="例如：今晚第一次把AI网页跑起来了，有点累但挺开心。"
+)
 
-# --- 4. 界面输入部分 ---
-topic = st.text_input("你想发什么内容？", placeholder="例如：今天吃到超好吃的龙虾...")
-style = st.selectbox("想要什么风格？", ["幽默搞笑", "文艺清新", "凡尔赛", "职场精英", "小红书爆款"])
+# 风格选择
+style = st.selectbox(
+    "你更想表达什么感觉？",
+    [
+        "克制自然",
+        "有成就感",
+        "轻松随意",
+        "有点情绪"
+    ]
+)
 
-# --- 5. 生成逻辑 ---
-if st.button("🚀 立即生成"):
-    if not topic:
-        st.warning("先写点什么吧，不然 AI 没法发挥哦！")
+# 生成按钮
+if st.button("🚀 生成朋友圈文案"):
+
+    # Prompt
+    prompt = f"""
+你是一个很懂中文表达的人。
+
+用户现在想发一条朋友圈。
+
+【用户内容】
+{topic}
+
+【用户想表达的感觉】
+{style}
+
+请按照以下感觉去表达：
+
+1. 像一个真实的人在记录某个瞬间
+2. 语气自然，不刻意高级
+3. 允许有停顿、口语感和留白
+4. 可以有一点画面感
+5. 可以有轻微隐喻、自嘲或小幽默
+6. 不要突然讲大道理
+7. 不要像营销号或公众号
+8. 情绪像真实生活里的状态
+9. 控制在60~120字
+10. 可以有一点轻松幽默或自嘲感
+11. 偶尔带一点“状态在慢慢变好”的感觉
+12. 不要刻意炫耀
+
+请输出3个不同感觉的版本：
+
+① 更克制一点
+② 更有生活感一点
+③ 更有情绪张力一点
+
+直接输出结果，不要解释。
+"""
+
+    # 你的 DeepSeek API Key
+    api_key = "sk-6e232d3669c94b0e9b9b0633f165134b"
+
+    # API 地址
+    url = "https://api.deepseek.com/chat/completions"
+
+    # 请求头
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    # 请求数据
+    data = {
+        "model": "deepseek-chat",
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    }
+
+    # 发送请求
+    response = requests.post(
+        url,
+        headers=headers,
+        data=json.dumps(data)
+    )
+
+    # 返回结果
+    if response.status_code == 200:
+
+        result = response.json()['choices'][0]['message']['content']
+
+        st.success("生成成功！")
+
+        st.write(result)
+
     else:
-        url = "https://api.deepseek.com/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": "deepseek-chat",
-            "messages": [
-                {"role": "system", "content": f"你是一个朋友圈文案大师，擅长写{style}风格的内容，会恰当使用 emoji。"},
-                {"role": "user", "content": f"请围绕这个主题写一段朋友圈：{topic}"}
-            ]
-        }
-
-        with st.spinner("✨ AI 正在努力构思中..."):
-            try:
-                response = requests.post(url, headers=headers, data=json.dumps(data))
-                if response.status_code == 200:
-                    result = response.json()['choices'][0]['message']['content']
-                    st.success("✨ 文案已送达！")
-                    # 使用 info 框展示文案，看起来更高级
-                    st.info(result)
-                    st.caption("💡 提示：在手机上长按上方文字即可复制")
-                else:
-                    st.error(f"服务器有点小情绪，错误代码：{response.status_code}")
-            except Exception as e:
-                st.error(f"连接出错了，请检查网络：{str(e)}")
+        st.error(f"请求失败：{response.text}")
